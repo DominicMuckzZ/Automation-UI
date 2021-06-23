@@ -6,8 +6,6 @@ import mouse
 import keyboard
 import pickle
 
-listOfAutos = []
-
 filetypes = (('CSV Files', '*.csv'),
              ('All Files', "*.*"))
 
@@ -16,6 +14,7 @@ macroFileTypes = (('Pickle File', '*.p'),
 
 class Application():
     def __init__(self):
+        self.listOfAutos = []
         self.window = tk.Tk()
         self.window.geometry("415x350")
         self.window.resizable(False,False)
@@ -105,8 +104,8 @@ class Application():
         readFile = tkinter.filedialog.askopenfilename(initialdir="C:",filetypes=macroFileTypes)
         if readFile is None:
             return
-        listOfAutos = pickle.load(open(readFile,'rb'))
-        for item in listOfAutos:
+        self.listOfAutos = pickle.load(open(readFile,'rb'))
+        for item in self.listOfAutos:
             itemSplit = item.split(",")
             if item.startswith("moveTo"):
                 x = itemSplit[1]
@@ -130,7 +129,7 @@ class Application():
         saveFile = f"{saveFile.name}.p"
         if saveFile is None:
             return
-        pickle.dump(listOfAutos,open(saveFile,"wb"))
+        pickle.dump(self.listOfAutos,open(saveFile,"wb"))
     
     def runItems(self):
         self.runButton.config(state="disable")
@@ -142,7 +141,7 @@ class Application():
         try:
             for line in self.fileContents.get_children():
                 values = self.fileContents.item(line)["values"]
-                for item in listOfAutos:
+                for item in self.listOfAutos:
                     time.sleep(delay)
                     itemSplit = item.split(",")
                     if item.startswith("moveTo"):
@@ -153,7 +152,7 @@ class Application():
                         mouse.click()
                     elif item.startswith("SendKeys"):
                         index = int(itemSplit[1])
-                        keyboard.write(f"{values[index]}")
+                        keyboard.write(f"{values[index-1]}")
                     elif item.startswith("PressKeys"):
                         for i in range(len(itemSplit)):
                             if i != 0:
@@ -177,13 +176,13 @@ class Application():
             y = int(y)
             x = int(x)
             
-            listOfAutos.append(f"moveTo,{x},{y}")
+            self.listOfAutos.append(f"moveTo,{x},{y}")
             self.listbox.insert(tk.END,f"{x},{y}")
         except Exception as e:
             print(e)
 
     def addSelectAll(self):
-        listOfAutos.append(f"PressKeys,ctrl,a")
+        self.listOfAutos.append(f"PressKeys,ctrl,a")
         self.listbox.insert(tk.END,f"SelectAll")
         
     def addPos(self):
@@ -192,38 +191,36 @@ class Application():
             y = int(y)
             x = int(x)
         
-            listOfAutos.append(f"moveTo,{x},{y}")
+            self.listOfAutos.append(f"moveTo,{x},{y}")
             self.listbox.insert(tk.END,f"{x},{y}")
         except:
             pass
 
     def addRClick(self):
-        listOfAutos.append("RClick")
+        self.listOfAutos.append("RClick")
         self.listbox.insert(tk.END,"RClick")
         
     def addClick(self):
-        listOfAutos.append("LClick")
+        self.listOfAutos.append("LClick")
         self.listbox.insert(tk.END,"LClick")
 
     def addEnter(self):
-        listOfAutos.append("PressKey,Enter")
+        self.listOfAutos.append("PressKey,Enter")
         self.listbox.insert(tk.END,"Enter")
 
     def addBack(self):
-        listOfAutos.append("PressKey,\\b")
+        self.listOfAutos.append("PressKey,\\b")
         self.listbox.insert(tk.END,"Backspace")
         
     def removeFromList(self):
         selection = self.listbox.curselection()
         for item in selection:
-            print(item)
-            print(listOfAutos)
-            listOfAutos.pop(item)
+            self.listOfAutos.pop(item)
             self.listbox.delete(item)
 
     def addColumn(self,event):
         column = self.fileContents.identify_column(event.x).replace("#","")
-        listOfAutos.append(f"SendKeys,{column}")
+        self.listOfAutos.append(f"SendKeys,{column}")
         self.listbox.insert(tk.END,f"SendKeys,{column}")
         
     def loadFile(self):
