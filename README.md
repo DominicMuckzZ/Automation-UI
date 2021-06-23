@@ -48,4 +48,4 @@ Users are unable to add custom keyboard shortcuts.
 Users can not run a process for a limited iteration without a CSV.
 
 ## New Updates
-None
+Minor Bug fix
