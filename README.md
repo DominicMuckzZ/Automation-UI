@@ -49,3 +49,5 @@ Users can not run a process for a limited iteration without a CSV.
 
 ## New Updates
 Minor Bug fix
+Displays a red dot for the MoveTo instructions.
+Allows insertion of additonal instructions at specific positions.
