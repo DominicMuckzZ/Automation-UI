@@ -5,12 +5,37 @@ import tkinter.filedialog
 import mouse
 import keyboard
 import pickle
+import turtle
 
 filetypes = (('CSV Files', '*.csv'),
              ('All Files', "*.*"))
 
 macroFileTypes = (('Pickle File', '*.p'),
                   ('All Files', '*.*'))
+
+bgColour = "white"
+root = tkinter.Tk()
+
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+root.overrideredirect(True)
+root.state('zoomed')
+
+root.configure(background=bgColour)
+root.wm_attributes("-transparentcolor",bgColour)
+root.lift()
+root.wm_attributes("-topmost",True)
+
+canvas = tkinter.Canvas(root,width=screen_width,height=screen_height,highlightthickness=0)
+t = turtle.RawTurtle(canvas)
+
+screen = t.getscreen()
+canvas.pack()
+screen.setworldcoordinates(0,screen_height,screen_width,0)
+
+t.color("red")
+t.hideturtle()
 
 class Application():
     def __init__(self):
@@ -75,6 +100,7 @@ class Application():
 
         self.listbox = tk.Listbox(self.window)
         self.listbox.place(x=310,y=155,width=100,height=140)
+        self.listbox.bind("<Double-1>",lambda e:self.displayPos("Select"))
 
         self.loadAutoButton = tk.Button(self.window,text="Load Auto",command=self.loadAuto)
         self.loadAutoButton.place(x=315,y=300,width=90,height=20)
@@ -97,8 +123,33 @@ class Application():
         self.headerEntry.place(x=110,y=0,width=15)
         
         keyboard.add_hotkey("alt+x", self.addCurPos)
+        self.xEntry.bind("<Key-Return>", self.displayPos)
+        self.yEntry.bind("<Key-Return>", self.displayPos)
         self.window.mainloop()
 
+    def displayPos(self,event):
+        x = -1
+        y = -1
+        t.clear()
+        t.up()
+        widgetName = self.window.focus_get().widgetName
+        if widgetName != "listbox":
+            try:
+                x = int(self.xEntry.get())
+                y = int(self.yEntry.get())
+            except:
+                pass
+        else:
+            selection = self.listbox.curselection()
+            item = self.listOfAutos[selection[0]]
+            if item.startswith("moveTo"):
+                itemSplit = item.split(",")
+                x = int(itemSplit[1])
+                y = int(itemSplit[2])
+        t.goto(x,y)
+        t.down()
+        t.dot(6)
+        
     def loadAuto(self):
         self.listbox.delete(0,tk.END)
         readFile = tkinter.filedialog.askopenfilename(initialdir="C:",filetypes=macroFileTypes)
@@ -132,6 +183,7 @@ class Application():
         pickle.dump(self.listOfAutos,open(saveFile,"wb"))
     
     def runItems(self):
+        t.clear()
         self.runButton.config(state="disable")
         try:
             delay = float(self.delayEntry.get())
@@ -163,11 +215,22 @@ class Application():
                     elif item.startswith("PressKey"):
                         key = itemSplit[1]
                         keyboard.press_and_release(key)
-        except:
+                self.fileContents.item(line, tags="runOver")
+        except Exception as e:
+            print(e)
             self.runButton.config(state="active")
             pass
         self.runButton.config(state="active")
-        
+
+    def getListPosition(self):
+        try:
+            selection = self.listbox.curselection()
+            position = selection[0]
+        except:
+            position = len(self.listOfAutos)
+        self.listbox.selection_clear(0, tk.END)
+        return position
+    
     def addCurPos(self):
         try:
             mousePos = mouse.get_position()
@@ -175,42 +238,48 @@ class Application():
 
             y = int(y)
             x = int(x)
-            
-            self.listOfAutos.append(f"moveTo,{x},{y}")
-            self.listbox.insert(tk.END,f"{x},{y}")
+            position = self.getListPosition()
+            self.listOfAutos.insert(position,f"moveTo,{x},{y}")
+            self.listbox.insert(position,f"{x},{y}")
         except Exception as e:
             print(e)
 
     def addSelectAll(self):
-        self.listOfAutos.append(f"PressKeys,ctrl,a")
-        self.listbox.insert(tk.END,f"SelectAll")
+        position = self.getListPosition()
+        self.listOfAutos.insert(position,f"PressKeys,ctrl,a")
+        self.listbox.insert(position,f"SelectAll")
         
     def addPos(self):
         try:
             x, y = self.xEntry.get(), self.yEntry.get()
             y = int(y)
             x = int(x)
-        
-            self.listOfAutos.append(f"moveTo,{x},{y}")
-            self.listbox.insert(tk.END,f"{x},{y}")
+            position = self.getListPosition()
+            
+            self.listOfAutos.insert(position,f"moveTo,{x},{y}")
+            self.listbox.insert(position,f"{x},{y}")
         except:
             pass
 
     def addRClick(self):
-        self.listOfAutos.append("RClick")
-        self.listbox.insert(tk.END,"RClick")
+        position = self.getListPosition()
+        self.listOfAutos.insert(position,"RClick")
+        self.listbox.insert(position,"RClick")
         
     def addClick(self):
-        self.listOfAutos.append("LClick")
-        self.listbox.insert(tk.END,"LClick")
+        position = self.getListPosition()
+        self.listOfAutos.insert(position,"LClick")
+        self.listbox.insert(position,"LClick")
 
     def addEnter(self):
-        self.listOfAutos.append("PressKey,Enter")
-        self.listbox.insert(tk.END,"Enter")
+        position = self.getListPosition()
+        self.listOfAutos.insert(position,"PressKey,Enter")
+        self.listbox.insert(position,"Enter")
 
     def addBack(self):
-        self.listOfAutos.append("PressKey,\\b")
-        self.listbox.insert(tk.END,"Backspace")
+        position = self.getListPosition()
+        self.listOfAutos.insert(position,"PressKey,\\b")
+        self.listbox.insert(position,"Backspace")
         
     def removeFromList(self):
         selection = self.listbox.curselection()
@@ -220,8 +289,9 @@ class Application():
 
     def addColumn(self,event):
         column = self.fileContents.identify_column(event.x).replace("#","")
-        self.listOfAutos.append(f"SendKeys,{column}")
-        self.listbox.insert(tk.END,f"SendKeys,{column}")
+        position = self.getListPosition()
+        self.listOfAutos.insert(position,f"SendKeys,{column}")
+        self.listbox.insert(position,f"SendKeys,{column}")
         
     def loadFile(self):
         try:
@@ -229,6 +299,7 @@ class Application():
             self.fileContents.destroy()
         except:
             pass
+
         self.fileContents = ttk.Treeview(self.treeFrame,show="headings")
         readFile = tkinter.filedialog.askopenfilename(initialdir="C:",filetypes=filetypes)
         firstRowHeader = self.headerVar.get()
